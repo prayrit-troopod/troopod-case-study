@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>CRO Engine Precision Case Study</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column, brief-style. Purple eyebrows + Q-numbers per Troopod audit docs. */
+:root {
+  --bg: #ffffff;
+  --surface: #f6f3fd;
+  --fg: #16131c;
+  --muted: #6b6578;
+  --rule: #e4def0;
+  --accent: #8e3ff1;
+  --accent-soft: #efe6fd;
+  --code-bg: #f4f1f9;
+  --font-display: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f0d13; --surface: #18151f; --fg: #f1eef6; --muted: #a39cb2;
+    --rule: #2c2737; --accent: #b48cff; --accent-soft: #261c3a; --code-bg: #1b1823;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f0d13; --surface: #18151f; --fg: #f1eef6; --muted: #a39cb2;
+  --rule: #2c2737; --accent: #b48cff; --accent-soft: #261c3a; --code-bg: #1b1823;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 15.5px; line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 48px 80px; display: flex; flex-direction: column; gap: 56px; }
+.logo { height: 26px; width: auto; display: block; }
+.logo-chip { display: inline-flex; padding: 8px 12px; border-radius: 8px; background: #fff; align-self: flex-start; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.25; }
+h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+.sec-label { font-size: 13px; color: var(--muted); }
+.lede { font-size: 17px; color: var(--muted); }
+header { display: flex; flex-direction: column; gap: 18px; }
+.divider { height: 3px; width: 64px; background: var(--accent); border-radius: 2px; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 24px; padding-top: 6px; }
+.meta div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.meta dt { font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.meta dd { margin: 0; font-weight: 500; }
+section { display: flex; flex-direction: column; gap: 16px; }
+section > header { gap: 6px; }
+ul, ol { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 8px; max-width: 66ch; }
+li::marker { color: var(--accent); }
+strong { font-weight: 600; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.callout { background: var(--accent-soft); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+.callout p { max-width: none; }
+.flow { overflow-x: auto; }
+.flow-row { display: flex; align-items: stretch; gap: 8px; min-width: 640px; }
+.node { flex: 1; border: 1px solid var(--rule); border-radius: 8px; padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 4px; }
+.node b { font-size: 13px; font-weight: 600; }
+.node span { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.node.new { border-color: var(--accent); }
+.node.new b { color: var(--accent); }
+.arrow { align-self: center; color: var(--muted); font-family: var(--font-mono); }
+.legend { font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border: 1.5px solid var(--accent); border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent); white-space: nowrap; }
+pre { margin: 0; background: var(--code-bg); border-radius: 10px; padding: 16px 18px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; }
+.tasks { display: flex; flex-direction: column; gap: 22px; }
+.task { display: grid; grid-template-columns: 44px 1fr; gap: 4px 12px; }
+.task .q { font-family: var(--font-display); font-weight: 700; color: var(--accent); font-size: 18px; line-height: 1.4; }
+.task > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.task .must { font-size: 13.5px; color: var(--muted); }
+.qs { counter-reset: q; list-style: none; padding: 0; gap: 12px; }
+.qs li { counter-increment: q; display: grid; grid-template-columns: 44px 1fr; gap: 12px; }
+.qs li::before { content: "Q" counter(q); font-weight: 700; color: var(--accent); }
+footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 480px) {
+  .wrap { padding-block: 28px 56px; gap: 44px; }
+  .task, .qs li { grid-template-columns: 34px 1fr; }
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="logo-chip"><img class="logo" src="data:image/png;base64,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" alt="Troopod"></span>
+  <div class="eyebrow">Troopod Engineering · Case Study</div>
+  <h1>Making our CRO engine precise with real behaviour data</h1>
+  <p class="lede">Connect GA4 and Microsoft Clarity to our audit engine, check the signals against what we already know in Supabase, and feed the result to our AI agents so every gap we report is backed by evidence.</p>
+  <div class="divider"></div>
+  <dl class="meta">
+    <div><dt>Prepared for</dt><dd>Aaditya Agarwal</dd></div>
+    <div><dt>Role</dt><dd>AI Engineer</dd></div>
+    <div><dt>Issued</dt><dd>21 Oct 2026</dd></div>
+    <div><dt>Discussion</dt><dd>Interview call, 7:00 PM</dd></div>
+  </dl>
+</header>
+
+<section>
+  <header><div class="eyebrow">Why this brief</div><h2>It sits close to work you've already done</h2></header>
+  <p>We picked this problem after reading your resume. Three things stood out:</p>
+  <ul>
+    <li>At Xoxoday you turned unstructured Intercom conversations into product-risk signals. Here the raw material is click and session behaviour rather than text, but the job is the same: find the signal that should change a decision.</li>
+    <li>Your outreach agent drops claims it can't verify and says "insufficient signal" instead of writing a weak draft. That is the behaviour we want from our engine.</li>
+    <li>You've run Supabase end to end, including access control, on Kotoba. Client analytics data needs exactly that care.</li>
+  </ul>
+</section>
+
+<section>
+  <header><div class="eyebrow">Context</div><h2>What the engine does today</h2></header>
+  <p>Troopod's CRO engine audits a client's ecommerce site against <strong>hundreds of checks</strong>. Each one is a precise check with a defined pass/fail condition, such as "a size guide is visible above the fold on the PDP". Each check is tied to a reason shoppers don't convert, such as low trust or unclear information. Which checks apply depends on the brand's category and product type. A jewellery brand and a supplement brand are not audited against the same list.</p>
+  <p>Simplified, an audit runs like this:</p>
+  <div class="flow" role="img" aria-label="Simplified audit flow: brand context, then AI picks the checks, then page checks, then diagnosis and ranking, then AI drafts fixes, then consultant review and roadmap. The evidence layer you are designing feeds the AI check selection, the ranking and the AI fix drafting.">
+    <div class="flow-row">
+      <div class="node"><b>Brand context</b><span>Category, price point, AOV, funnel numbers, customer objections</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>AI picks checks</b><span>Chooses the checks relevant to this brand</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Page checks</b><span>Each check passes, fails or doesn't apply</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Diagnosis</b><span>Failures grouped and ranked by severity</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>AI drafts fixes</b><span>One fix per failing check</span></div>
+      <div class="arrow">→</div>
+      <div class="node"><b>Consultant review</b><span>Prioritised roadmap for the client</span></div>
+    </div>
+    <div class="flow-row" style="margin-top:8px">
+      <div class="node new" style="flex:1"><b>Evidence layer (the part you're designing)</b><span>Live GA4 + Clarity data matched to pages and checks, compared with Supabase history. It feeds three steps: which checks to run, how failures are ranked, and which fix the AI recommends.</span></div>
+    </div>
+  </div>
+  <p>A CRO consultant reviews every AI recommendation before it reaches the client. We rerun the audit every few weeks to measure what changed. <strong>Supabase</strong> stores the check library, past audits, category benchmarks and the results of fixes we've tested before.</p>
+</section>
+
+<section>
+  <header><div class="eyebrow">The problem</div><h2>A failed check doesn't prove a lost sale</h2></header>
+  <p>The checks are objective, but they describe what a page <em>has</em>, not how shoppers <em>behave</em> on it. Funnel numbers and session-recording insights reach us today as one-off snapshots, mostly at onboarding, rather than as live data tied to specific pages and checks. That causes three precision problems:</p>
+  <ul>
+    <li><strong>False positives.</strong> A PDP can fail a check and still convert well. We report a gap that isn't costing the client anything.</li>
+    <li><strong>Ranking from assumptions.</strong> Severity and brand context decide the order. Neither knows that this exact page gets 40% of mobile traffic and loses most of it before add-to-cart.</li>
+    <li><strong>Fixes not tied to behaviour.</strong> The AI picks a fix from the brand's context and past results. It can't yet see where shoppers rage-click or how far they scroll on the page in question.</li>
+  </ul>
+  <div class="callout">
+    <h3>Definition of precision for this brief</h3>
+    <p>Of the gaps the engine marks as high priority, the share that are real conversion leaks. A leak is confirmed by behaviour data, by a CRO strategist's review, or by a past experiment that won when we fixed the same gap.</p>
+  </div>
+</section>
+
+<section>
+  <header><div class="eyebrow">The ask</div><h2>Design the evidence layer</h2></header>
+  <p>Plan a layer that keeps live behaviour data next to the audit and hands it to the AI agents at the right moments. It should:</p>
+  <ol>
+    <li>Find the funnel stage with the biggest drop-off (browse to cart, cart to checkout, or checkout to purchase) from GA4, compared with category benchmarks. That tells the engine where to focus.</li>
+    <li>Pull the GA4 and Clarity data for the pages and devices each check covers.</li>
+    <li>For each failing check, decide whether the behaviour data supports it, contradicts it, or is too thin to say.</li>
+    <li>Look up Supabase for benchmarks from similar brands and past results on the same check.</li>
+    <li>Give the AI agents a structured evidence pack, so the ranking and the recommended fix are specific, cite their sources and are easy for a consultant to review.</li>
+  </ol>
+</section>
+
+<section>
+  <header><div class="eyebrow">Data sources</div><h2>What's available and where it gets awkward</h2></header>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Source</th><th>Useful signals</th><th>Constraints to design around</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>GA4</strong><br><span class="sec-label">Data API, <code>runReport</code></span></td>
+          <td>Sessions, engagement rate and bounce by <code>pagePath</code> and <code>deviceCategory</code>. Ecommerce funnel events <code>view_item</code> → <code>add_to_cart</code> → <code>begin_checkout</code> → <code>purchase</code>. Traffic source and landing page.</td>
+          <td>Quotas and row limits. Thresholded or sampled data on low-volume pages. Clients name page paths and custom events inconsistently.</td>
+        </tr>
+        <tr>
+          <td><strong>Clarity</strong><br><span class="sec-label">Data Export API</span></td>
+          <td>Rage clicks, dead clicks, excessive scrolling, quick backs, scroll depth and script errors, broken down by URL and device.</td>
+          <td>Only the last 1–3 days per call, a small daily request cap per project, and a limit on dimensions per request. You'll need to snapshot it daily to build history.</td>
+        </tr>
+        <tr>
+          <td><strong>Supabase</strong><br><span class="sec-label">Existing database</span></td>
+          <td>Check library, past audit results, category benchmarks, past test results.</td>
+          <td>We won't share the real schema. Design a mock schema for these four areas, add your time-series tables, and show how they join.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sec-label">Check the current API limits in Google's and Microsoft's documentation and design to them. Don't rely on the summary above.</p>
+</section>
+
+<section>
+  <header><div class="eyebrow">Deliverables</div><h2>What to bring to the interview call</h2></header>
+  <p>No code is needed. Come ready to walk us through how you would refine the engine, in about 20 minutes, with something to screen-share: a diagram, a few slides or a one-page doc. Cover these six points.</p>
+  <div class="callout">
+    <h3>We're not looking for the right answer</h3>
+    <p>There isn't one, and we don't expect you to guess how we've built things. We want to see how you solve the problem: how you break it down, the assumptions you make and say out loud, the trade-offs you weigh, and how you change your approach when we push back.</p>
+  </div>
+  <div class="tasks">
+    <div class="task"><div class="q">01</div><div>
+      <h3>Your architecture</h3>
+      <p>How data flows from GA4 and Clarity into Supabase and on to the AI agents. Cover client auth and token storage, sync schedule, the tables you'd add, and where each step runs (edge function, worker or cron).</p>
+      <p class="must">Say how you'd keep one client's data away from another's, for example with row-level security.</p>
+    </div></div>
+    <div class="task"><div class="q">02</div><div>
+      <h3>Five checks mapped to signals</h3>
+      <p>Pick five pass/fail checks of your own, the kind any ecommerce CRO audit would run. For each one, name the GA4 and Clarity signals that confirm or contradict it, the threshold you'd use, and the minimum traffic needed before you trust the call.</p>
+      <p class="must">Example: "Add-to-cart button below the fold on mobile" → mobile <code>view_item</code>→<code>add_to_cart</code> rate against the desktop rate and the category benchmark, plus mobile scroll depth on PDPs.</p>
+    </div></div>
+    <div class="task"><div class="q">03</div><div>
+      <h3>How you'd re-rank failing checks</h3>
+      <p>A scoring idea that uses the evidence. At minimum it should weigh how severe the gap is, how much traffic it affects, whether it sits in the worst funnel stage, how strong the behavioural evidence is, and how often fixing it has worked before. Explain how the weights would be tuned as results come in from each audit cycle.</p>
+    </div></div>
+    <div class="task"><div class="q">04</div><div>
+      <h3>How the AI uses the evidence</h3>
+      <p>What goes into the evidence pack, how the AI returns structured output (the format below is a starting point), and how it marks a finding "insufficient evidence" instead of guessing.</p>
+    </div></div>
+    <div class="task"><div class="q">05</div><div>
+      <h3>How you'd prove it worked</h3>
+      <p>The labelled set you'd build, the metric (for example precision@10 on high-priority findings, before and after), how you'd catch the AI inventing evidence, and what you'd log to spot drift.</p>
+    </div></div>
+    <div class="task"><div class="q">06</div><div>
+      <h3>What you'd build first</h3>
+      <p>The version you'd ship in the first two weeks, what you'd leave out, and the one decision you're least sure about.</p>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <header><div class="eyebrow">Output format</div><h2>One refined finding, as the AI should return it</h2></header>
+  <p>An illustrative example with made-up numbers. Change the fields if you have a better design, and tell us why.</p>
+<pre>{
+  "check_id": "example-mobile-atc-visible",
+  "check": "Add-to-cart visible without scrolling on mobile",
+  "page_type": "PDP",
+  "device": "mobile",
+  "funnel_stage": "browse_to_cart",
+  "audit_status": "fail",
+  "evidence_verdict": "supports",          // supports | contradicts | insufficient
+  "evidence": [
+    { "source": "ga4", "metric": "view_item_to_add_to_cart_rate",
+      "value": 0.041, "comparison": { "desktop": 0.093, "category_p50": 0.078 },
+      "window": "last_28_days", "sessions": 18420 },
+    { "source": "clarity", "metric": "scroll_depth_p50_pdp",
+      "value": 0.38, "window": "rolling_28_day_snapshot" },
+    { "source": "past_tests", "similar_tests": 6, "wins": 5,
+      "median_lift": 0.11 }
+  ],
+  "priority_score": 87,
+  "confidence": "high",
+  "finding": "Most mobile shoppers never scroll to the add-to-cart button. ...",
+  "recommended_fix": "Sticky add-to-cart bar on mobile PDPs ...",
+  "estimated_impact": "Mobile ATC rate from 4.1% toward the 7.8% category median",
+  "reviewer_notes": "What a consultant should double-check before this goes to the client"
+}</pre>
+</section>
+
+<section>
+  <header><div class="eyebrow">Things we'll ask about</div><h2>Be ready to discuss these</h2></header>
+  <ol class="qs">
+    <li>A page has a clear gap but too little traffic to judge. What does the engine report, and how does the client see it?</li>
+    <li>GA4 says a page converts well but Clarity shows heavy rage clicks there. How do you settle the conflict?</li>
+    <li>Clients tag events and name page paths differently. How do you map their GA4 data onto our page types without hand work for every client?</li>
+    <li>How do you stop the LLM from quoting a number that isn't in the evidence pack?</li>
+    <li>We rerun the audit every few weeks. How does your layer show whether a shipped fix moved the numbers, and feed that back into future rankings?</li>
+    <li>What would you cache, and what does one client audit cost in API calls and LLM tokens?</li>
+    <li>Clients grant read access to their analytics. What scopes do you request, where do tokens live, and what happens when access is revoked?</li>
+  </ol>
+</section>
+
+<section>
+  <header><div class="eyebrow">How we'll assess it</div><h2>Rubric</h2></header>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Area</th><th>What good looks like</th><th>Weight</th></tr></thead>
+      <tbody>
+        <tr><td>Signal mapping</td><td>Signals actually measure the check. Thresholds and minimum samples are justified.</td><td class="num">25%</td></tr>
+        <tr><td>Data and Supabase design</td><td>Sensible tables and sync, client data kept separate, works within API limits.</td><td class="num">20%</td></tr>
+        <tr><td>AI integration</td><td>Structured output, grounded in the evidence pack, says "insufficient evidence" when it should, quick for a human to review.</td><td class="num">20%</td></tr>
+        <tr><td>Evaluation</td><td>A believable way to measure precision before and after.</td><td class="num">15%</td></tr>
+        <tr><td>First version</td><td>A realistic first build and a clear view of what to leave out.</td><td class="num">10%</td></tr>
+        <tr><td>Communication</td><td>Explains clearly on the call, handles follow-up questions, honest about trade-offs.</td><td class="num">10%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <header><div class="eyebrow">The call</div><h2>Logistics</h2></header>
+  <ul>
+    <li>We'll discuss this on the interview call at 7:00 PM. Plan for about 20 minutes of walkthrough, then questions.</li>
+    <li>Bring whatever you'll screen-share. Rough sketches are fine. We care about the thinking, not the polish.</li>
+    <li>Assume any LLM provider you like.</li>
+    <li>Everything you need is in this brief. Use public data and your own mock data only. We won't share client data or our internal check library.</li>
+    <li>Questions are welcome at any point. Asking good ones counts in your favour.</li>
+  </ul>
+</section>
+
+<footer>
+  <div>Troopod · Conversion rate optimisation for D2C brands</div>
+  <div>This brief and the materials we share are confidential and are for this assessment only.</div>
+</footer>
+
+</div>
+
+</body>
+</html>
